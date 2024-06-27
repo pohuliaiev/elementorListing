@@ -1,0 +1,16 @@
+{
+  "name": "elementor-listings",
+  "version": "1.0.0",
+  "description": "",
+  "main": "elementor-listings.php",
+  "scripts": {
+    "start": "wp-scripts start",
+    "build": "wp-scripts build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@wordpress/scripts": "^28.2.0"
+  }
+}
