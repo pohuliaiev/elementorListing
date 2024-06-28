@@ -31,23 +31,47 @@ class Elementor_Custom_Widget extends \Elementor\Widget_Base {
 		);
 
 		$this->add_control(
-			'heading',
+			'post_quantity',
 			[
-				'label' => __( 'Heading', 'plugin-name' ),
-				'type' => \Elementor\Controls_Manager::TEXT,
-				'default' => __( 'Hello World', 'plugin-name' ),
-				'placeholder' => __( 'Type your heading here', 'plugin-name' ),
+				'label' => __( 'Number of properties in the widget', 'plugin-name' ),
+				'type' => \Elementor\Controls_Manager::NUMBER,
+				'min' => 1,
+				'max' => 50,
+				'step' => 1,
+				'default' => 5,
 			]
 		);
 
 		$this->add_control(
-			'color',
+			'show_filter',
 			[
-				'label' => __( 'Text Color', 'plugin-name' ),
-				'type' => \Elementor\Controls_Manager::COLOR,
-				'selectors' => [
-					'{{WRAPPER}} .custom-heading' => 'color: {{VALUE}};',
-				],
+				'label' => __( 'Show Filter', 'plugin-name' ),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => __( 'Show', 'plugin-name' ),
+				'label_off' => __( 'Hide', 'plugin-name' ),
+				'return_value' => 'yes',
+				'default' => 'no',
+			]
+		);
+
+		$this->add_control(
+			'city_term',
+			[
+				'label' => __('Select City', 'your-plugin-textdomain'),
+				'type' => \Elementor\Controls_Manager::SELECT,
+				'options' => $this->get_taxonomy_terms_options('localization'), // Replace with your actual taxonomy slug
+				'label_block' => true,
+			]
+		);
+
+
+		$this->add_control(
+			'market_term',
+			[
+				'label' => __('Select Type', 'your-plugin-textdomain'),
+				'type' => \Elementor\Controls_Manager::SELECT,
+				'options' => $this->get_taxonomy_terms_options('market'), // Replace with your actual taxonomy slug
+				'label_block' => true,
 			]
 		);
 
@@ -56,15 +80,48 @@ class Elementor_Custom_Widget extends \Elementor\Widget_Base {
 
 	protected function render() {
 		$settings = $this->get_settings_for_display();
-		echo '<h2 class="custom-heading" style="color: ' . esc_attr( $settings['color'] ) . ';">' . esc_html( $settings['heading'] ) . '</h2>';
 
-		include( __DIR__ . '/templates/filter.php');
+		$post_quantity = $settings['post_quantity'];
 
-		$args = array(
-			'post_type' => 'imoveis',
-			'posts_per_page' => 4,
-		);
+		$city_term_id = $settings['city_term'];
+		$market_term_id = $settings['market_term'];
+
+		$tax_query = [];
+
+		$show_filter = $settings['show_filter'];
+		if ('yes' === $show_filter) {
+			include( __DIR__ . '/templates/filter.php');
+        }
+
+
+		if ($city_term_id) {
+			$tax_query[] = [
+				'taxonomy' => 'localization',
+				'field'    => 'name',
+				'terms'    => $city_term_id,
+			];
+		}
+
+		if ($market_term_id) {
+			$tax_query[] = [
+				'taxonomy' => 'market',
+				'field'    => 'name',
+				'terms'    => $market_term_id,
+			];
+		}
+
+		$args = [
+			'post_type' => 'imoveis', // Replace with your custom post type
+			'posts_per_page' => $post_quantity,
+			'tax_query' => $tax_query,
+		];
+
+		if (empty($tax_query)) {
+			unset($args['tax_query']);
+		}
+
 		$loop = new WP_Query( $args );
+
 
 		if ( $loop->have_posts() ) {
 			echo '<div>
@@ -126,13 +183,53 @@ class Elementor_Custom_Widget extends \Elementor\Widget_Base {
 	}
 
 	protected function _content_template() {
+		//$settings = $this->get_settings_for_display();
 		?>
         <#
-        var settings = settings;
+        var post_quantity = settings.post_quantity || 5; // Default value or fallback
+        var show_filter = settings.show_filter || 'no'; // Default value or fallback
+
+        if (show_filter === 'yes') {
         #>
-        <h2 class="custom-heading" style="color: {{ settings.color }};">{{{ settings.heading }}}</h2>
+		<?php include( __DIR__ . '/templates/preview/filter.php'); ?>
+        <#
+        }
+        #>
+
+        <div id="listing-container">
+            <div id="fadeOverlay"></div>
+            <div class="lds-ring d-none" id="preloader">
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+            <div class="listing-widget-wrapper" id="listing-wrapper">
+            </div>
+        </div>
+
 
 		<?php
+	}
+
+	private function get_taxonomy_terms_options($taxonomy_slug) {
+		$terms = get_terms([
+			'taxonomy' => $taxonomy_slug,
+			'hide_empty' => true,
+		]);
+
+		$options = ['' => __('All', 'your-plugin-textdomain')];
+
+		if (!empty($terms) && !is_wp_error($terms)) {
+			foreach ($terms as $term) {
+				$options[$term->name] = $term->name;
+			}
+		}
+
+
+		$options = array_merge(['' => __('All', 'your-plugin-textdomain')], $options);
+
+		return $options;
 	}
 }
 

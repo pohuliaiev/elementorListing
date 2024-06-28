@@ -5,26 +5,36 @@ add_action('wp_ajax_nopriv_elementor_listings_ajax_request', 'elementor_listings
 function elementor_listings_ajax_handler() {
 	check_ajax_referer('elementor-listings-nonce', 'nonce');
 
-	if (isset($_POST['city_id']) || isset($_POST['market_id'])) {
-		$city_id = sanitize_text_field($_POST['city_id']);
-		$market_id = sanitize_text_field($_POST['market_id']);
+		$city_id = isset($_POST['city_id']) ? sanitize_text_field($_POST['city_id']) : '';
+		$market_id = isset($_POST['market_id']) ? sanitize_text_field($_POST['market_id']) : '';
+		$quantity = isset($_POST['quantity']) ? sanitize_text_field($_POST['quantity']) : 5;
 
-		// Query posts by custom taxonomy ID
+		// Initialize tax query array
+		$tax_query = array();
+
+		// Add taxonomy query for city
+		if ($city_id) {
+			$tax_query[] = array(
+				'taxonomy' => 'localization', // Replace with your custom taxonomy
+				'field'    => 'term_id',
+				'terms'    => $city_id,
+			);
+		}
+
+		// Add taxonomy query for market
+		if ($market_id) {
+			$tax_query[] = array(
+				'taxonomy' => 'market', // Replace with your custom taxonomy
+				'field'    => 'term_id',
+				'terms'    => $market_id,
+			);
+		}
+
+		// Query posts based on tax_query
 		$args = array(
 			'post_type' => 'imoveis', // Replace with your custom post type
-			'tax_query' => array(
-				'relation' => 'AND',
-				array(
-					'taxonomy' => 'localization', // Replace with your custom taxonomy
-					'field'    => 'term_id',
-					'terms'    => $city_id,
-				),
-				array(
-					'taxonomy' => 'market', // Replace with your custom taxonomy
-					'field'    => 'term_id',
-					'terms'    => $market_id,
-				),
-			),
+			'tax_query' => $tax_query, // Include tax_query if any taxonomy ID is provided
+			'posts_per_page' => $quantity
 		);
 		$query = new WP_Query($args);
 
@@ -57,9 +67,7 @@ function elementor_listings_ajax_handler() {
 		} else {
 			wp_send_json_error('No posts found');
 		}
-	} else {
-		wp_send_json_error('Data ID not provided');
-	}
+
 
 	wp_die();
 }

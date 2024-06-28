@@ -31,7 +31,7 @@ class Filter{
             this.filterButton.addEventListener('click', (e) => {
                 const cityId = document.getElementById('city-select').getAttribute('data-id')
                 const marketId = document.getElementById('market-select').getAttribute('data-id')
-                console.log(cityId,marketId)
+
                 e.preventDefault()
                 loader.classList.remove('d-none')
                 overlay.style.display = "block"
